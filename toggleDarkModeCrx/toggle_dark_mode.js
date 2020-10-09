@@ -1,6 +1,20 @@
+// ==UserScript==
+// @name         toggleDarkMode
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description  toggle web page dark mode
+// @author       You
+// @match        *://**/*
+// @grant        none
+// ==/UserScript==
+
 ;(function () {
   'use strict'
 
+  // invert：反转滤镜有助于反转应用程序的配色方案。 因此，黑色变成白色，白色变成黑色，所有颜色都类似。
+  // hue-rotate：色相旋转滤镜可以帮助处理所有其他非黑色和白色的颜色。将色相旋转 180 度，能够确保页面的颜色主题不会改变，而只是减弱其颜色。
+  // 对所有图像添加相同的规则，以逆转效果。
+  // 同时向 HTML 元素添加一个动画，以确保转换不会变得刻板
   let styleText = `
  html {
    transition: color 300ms, background-color 300ms !important;
@@ -18,7 +32,6 @@
    filter: invert(1) hue-rotate(180deg) !important;
    background-color: #000;
  }
-
  .dark-theme-toggle-btn {
    position: fixed;
    top: 20px;
@@ -73,13 +86,15 @@
 
   let themeBtn = document.createElement('div')
   themeBtn.classList.add('dark-theme-toggle-btn')
+  themeBtn.setAttribute('draggable', true)
   themeBtn.onclick = function () {
     themeValue = !themeValue
     toggleDarkMode()
   }
-  themeBtn.ontouchmove = function (e) {
-    let left = e.touches[0].pageX - 15
-    let top = e.touches[0].pageY - 15
+
+  function onMoveHandle(pageX, pageY) {
+    let left = pageX - 15
+    let top = pageY - 15
     if (left <= 0) {
       left = 0
     }
@@ -94,6 +109,26 @@
     }
     themeBtn.style.left = left + 'px'
     themeBtn.style.top = top + 'px'
+  }
+  function bodyDragOver(e) {
+    e.preventDefault()
+  }
+  themeBtn.ontouchmove = function (e) {
+    e.stopPropagation()
+    e.preventDefault()
+    onMoveHandle(e.touches[0].pageX, e.touches[0].pageY)
+  }
+
+  themeBtn.ondragstart = function (e) {
+    themeBtn.style.opacity = 0.001
+    e.dataTransfer.dropEffect = 'move'
+    e.dataTransfer.effectAllowed = 'move'
+    document.body.addEventListener('dragover', bodyDragOver, false)
+  }
+  themeBtn.ondragend = function (e) {
+    themeBtn.style.opacity = ''
+    document.body.removeEventListener('dragover', bodyDragOver)
+    onMoveHandle(e.pageX, e.pageY)
   }
   document.body.appendChild(themeBtn)
 
